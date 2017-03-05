@@ -43,11 +43,11 @@ LOCAL_PATH:= $(call my-dir)
 ###############################################################################
 
 include $(CLEAR_VARS)
+LOCAL_SDCLANG_LTO := true
+LOCAL_SDCLANG_LTO_LDFLAGS := -O3 -fPIC
 LOCAL_FDO_SUPPORT := true
-ifneq ($(strip $(TARGET_FDO_CFLAGS)),)
-	# This should be the last -Oxxx specified in LOCAL_CFLAGS
-	LOCAL_CFLAGS += -O2
-endif
+# This should be the last -Oxxx specified in LOCAL_CFLAGS
+LOCAL_CFLAGS += -O3
 
 LOCAL_ARM_MODE := thumb
 # used for testing
@@ -55,12 +55,17 @@ LOCAL_ARM_MODE := thumb
 
 LOCAL_CFLAGS += \
 	-fPIC \
+	-funsafe-math-optimizations \
 	-Wno-unused-parameter \
 	-U_FORTIFY_SOURCE \
 	-D_FORTIFY_SOURCE=1 \
 	-DSKIA_IMPLEMENTATION=1 \
 	-Wno-clobbered -Wno-error \
 	-fexceptions
+
+ifeq ($(ARCH_ARM_HAVE_NEON),true)
+  LOCAL_CFLAGS_arm += -funsafe-math-optimizations
+endif
 
 LOCAL_CPPFLAGS := \
 	-std=c++11 \
@@ -830,6 +835,9 @@ LOCAL_WHOLE_STATIC_LIBRARIES := libskia_static
 LOCAL_SHARED_LIBRARIES := \
         libcutils
 
+LOCAL_SDCLANG_LTO := true
+LOCAL_FDO_SUPPORT := true
+
 ifeq ($(TARGET_HAVE_QC_PERF),true)
         LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
 endif
@@ -852,15 +860,3 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
 include $(BASE_PATH)/skia_static_deps.mk
 include $(BUILD_SHARED_LIBRARY)
 
-#############################################################
-# Build the skia tools
-#
-
-# benchmark (timings)
-include $(BASE_PATH)/bench/Android.mk
-
-#disable build in PDK
-ifneq ($(TARGET_BUILD_PDK),true)
-# diamond-master (one test to rule them all)
-include $(BASE_PATH)/dm/Android.mk
-endif
